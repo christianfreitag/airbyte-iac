@@ -64,7 +64,7 @@ def push_source(client: AirbyteClient, yaml_path: Path, dry_run: bool = False) -
 
 
 def push_all_sources(client: AirbyteClient, infra: str, root: Path, dry_run: bool = False) -> list:
-    d = root / "infras" / infra / "sources"
+    d = root / "targets" / infra / "sources"
     if not d.exists():
         return []
     return _collect_results(lambda f: push_source(client, f, dry_run), sorted(d.glob("*.yaml")))
@@ -106,7 +106,7 @@ def push_destination(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fal
 
 
 def push_all_destinations(client: AirbyteClient, infra: str, root: Path, dry_run: bool = False) -> list:
-    d = root / "infras" / infra / "destinations"
+    d = root / "targets" / infra / "destinations"
     if not d.exists():
         return []
     return _collect_results(lambda f: push_destination(client, f, dry_run), sorted(d.glob("*.yaml")))
@@ -215,7 +215,7 @@ def push_connection(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fals
 
 
 def push_all_connections(client: AirbyteClient, infra: str, root: Path, select: str = None, dry_run: bool = False) -> list:
-    conn_base = root / "infras" / infra / "connections"
+    conn_base = root / "targets" / infra / "connections"
     if not conn_base.exists():
         return []
 

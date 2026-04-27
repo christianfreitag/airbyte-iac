@@ -55,7 +55,7 @@ def _format_diff(diff: DeepDiff) -> list[str]:
 
 
 def diff_connections(client: AirbyteClient, infra: str, root: Path, select: str = None) -> list:
-    conn_base = root / "infras" / infra / "connections"
+    conn_base = root / "targets" / infra / "connections"
     if not conn_base.exists():
         return []
 

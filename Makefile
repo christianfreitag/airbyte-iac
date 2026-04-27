@@ -1,4 +1,4 @@
-INFRA   ?= prod
+TARGET  ?= prod
 FROM    ?=
 SELECT  ?=
 FILE    ?=
@@ -12,20 +12,37 @@ _verbose = $(if $(VERBOSE),--verbose,)
 install:
 	pip install -r requirements.txt
 
-extract:
-	python cli.py extract --infra=$(INFRA) $(_select)
+init:
+	python cli.py init
 
-diff:
-	python cli.py diff --infra=$(INFRA) $(_select) $(_verbose)
-
-list:
-	python cli.py list --infra=$(INFRA)
+pull:
+	python cli.py pull --target=$(TARGET) $(_select)
 
 push:
-	python cli.py push --infra=$(INFRA) $(_from) $(_select) $(_file)
+	python cli.py push --target=$(TARGET) $(_from) $(_select) $(_file)
 
 dry-run:
-	python cli.py push --infra=$(INFRA) $(_from) $(_select) $(_file) --dry-run
+	python cli.py push --target=$(TARGET) $(_from) $(_select) $(_file) --dry-run
+
+status:
+	python cli.py status --target=$(TARGET) $(_select) $(_verbose)
+
+sync:
+	python cli.py pull --target=$(FROM)
+	python cli.py push --target=$(TARGET) --from=$(FROM) $(_select)
+
+list:
+	python cli.py list --target=$(TARGET)
 
 workspaces:
-	python cli.py workspaces --infra=$(INFRA)
+	python cli.py workspaces --target=$(TARGET)
+
+clone:
+	python cli.py clone --target=$(TARGET) --from=$(FROM)
+
+reset:
+	python cli.py reset --target=$(TARGET)
+
+clean:
+	@read -p "Apagar targets/$(TARGET)/? Digite 'yes' para confirmar: " confirm; \
+	[ "$$confirm" = "yes" ] && rm -rf targets/$(TARGET) && echo "targets/$(TARGET)/ removida." || echo "Cancelado."

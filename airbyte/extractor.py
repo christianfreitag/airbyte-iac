@@ -33,7 +33,7 @@ def _write_yaml(path: Path, data: dict):
 
 def extract_sources(client: AirbyteClient, infra: str, root: Path):
     sources = client.list_sources()
-    out = root / "infras" / infra / "sources"
+    out = root / "targets" / infra / "sources"
     out.mkdir(parents=True, exist_ok=True)
 
     for src in sources:
@@ -49,7 +49,7 @@ def extract_sources(client: AirbyteClient, infra: str, root: Path):
 
 def extract_destinations(client: AirbyteClient, infra: str, root: Path):
     destinations = client.list_destinations()
-    out = root / "infras" / infra / "destinations"
+    out = root / "targets" / infra / "destinations"
     out.mkdir(parents=True, exist_ok=True)
 
     for dst in destinations:
@@ -118,7 +118,7 @@ def extract_connections(client: AirbyteClient, infra: str, root: Path, select: s
         }
         data = {k: v for k, v in data.items() if v is not None}
 
-        out = root / "infras" / infra / "connections" / tag
+        out = root / "targets" / infra / "connections" / tag
         _write_yaml(out / f"{_slug(conn['name'])}.yaml", data)
 
     return connections

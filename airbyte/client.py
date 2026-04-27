@@ -73,7 +73,7 @@ class AirbyteClient:
             url, json=data, auth=self._basic_auth, headers=self._headers(), timeout=120
         )
         resp.raise_for_status()
-        return resp.json()
+        return resp.json() if resp.content else {}
 
     @property
     def workspace_id(self) -> str:
@@ -151,6 +151,15 @@ class AirbyteClient:
     def update_connection(self, connection_id: str, config: dict) -> dict:
         config["connectionId"] = connection_id
         return self._post("connections/update", config)
+
+    def delete_connection(self, connection_id: str):
+        self._post("connections/delete", {"connectionId": connection_id})
+
+    def delete_source(self, source_id: str):
+        self._post("sources/delete", {"sourceId": source_id})
+
+    def delete_destination(self, destination_id: str):
+        self._post("destinations/delete", {"destinationId": destination_id})
 
     # --- Schema ---
 

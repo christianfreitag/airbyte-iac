@@ -4,5 +4,5 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-infras/*
-!infras/example
+targets/*
+!targets/example
