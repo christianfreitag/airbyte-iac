@@ -1,7 +1,20 @@
 """Modelos Pydantic para validação de YAMLs antes de enviar ao Airbyte."""
 from __future__ import annotations
-from typing import Any, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, model_validator
+
+
+class SourceConfig(BaseModel):
+    name: str
+    source_definition: str
+    connection_configuration: Dict[str, Any] = {}
+
+
+class DestinationConfig(BaseModel):
+    name: str
+    destination_definition: str
+    connection_configuration: Dict[str, Any] = {}
+
 
 
 class StreamConfig(BaseModel):

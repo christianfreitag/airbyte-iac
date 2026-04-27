@@ -7,19 +7,22 @@ from pathlib import Path
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text
 
 from airbyte.client import AirbyteClient
 from airbyte.extractor import extract_sources, extract_destinations, extract_connections
-from airbyte.pusher import push_connection, push_all_connections
+from airbyte.pusher import (
+    push_connection, push_all_connections,
+    push_source, push_all_sources,
+    push_destination, push_all_destinations,
+)
 from airbyte.differ import diff_connections
 
 console = Console()
 ROOT = Path(__file__).parent
 
 
-def get_client(env: str) -> AirbyteClient:
-    env_file = ROOT / f".env.{env}"
+def get_client(select: str) -> AirbyteClient:
+    env_file = ROOT / f".env.{select}"
     if not env_file.exists():
         console.print(f"[red]Arquivo {env_file} não encontrado.[/red]")
         sys.exit(1)
@@ -35,21 +38,40 @@ def get_client(env: str) -> AirbyteClient:
     )
 
 
+def _push_table(results: list, title: str):
+    table = Table(title=title)
+    table.add_column("Arquivo")
+    table.add_column("Status")
+    table.add_column("Detalhe", no_wrap=False)
+    for r in results:
+        action = r.get("_action", "dry-run")
+        if action == "error":
+            color, icon = "red", "✗"
+            detail = r.get("_error", "")[:120]
+        elif action in ("created", "updated"):
+            color, icon = "green", "✓"
+            detail = r.get("name", "")
+        else:
+            color, icon = "yellow", "~"
+            detail = ""
+        table.add_row(r.get("_file", r.get("name", "?")), f"[{color}]{icon} {action}[/{color}]", detail)
+    console.print(table)
+
+
 def cmd_workspaces(args):
-    client = get_client(args.env)
-    workspaces = client.list_workspaces()
-    for w in workspaces:
+    client = get_client(args.select)
+    for w in client.list_workspaces():
         console.print(f"[bold]{w['workspaceId']}[/bold]  {w.get('name', '')}")
 
 
 def cmd_list(args):
-    client = get_client(args.env)
-    with console.status(f"[bold]Buscando conexões ({args.env})..."):
+    client = get_client(args.select)
+    with console.status("[bold]Buscando conexões..."):
         connections = client.list_connections()
         sources = {s["sourceId"]: s["name"] for s in client.list_sources()}
         destinations = {d["destinationId"]: d["name"] for d in client.list_destinations()}
 
-    table = Table(title=f"Conexões — {args.env} ({len(connections)})")
+    table = Table(title=f"Conexões — {args.select} ({len(connections)})")
     table.add_column("Nome")
     table.add_column("Source")
     table.add_column("Destination")
@@ -70,68 +92,57 @@ def cmd_list(args):
 
 
 def cmd_extract(args):
-    client = get_client(args.env)
+    client = get_client(args.select)
 
-    with console.status(f"[bold]Extraindo sources ({args.env})..."):
-        sources = extract_sources(client, args.env, ROOT)
-    console.print(f"[green]✓[/green] {len(sources)} sources → sources/{args.env}/")
+    with console.status("[bold]Extraindo sources..."):
+        sources = extract_sources(client, args.select, ROOT)
+    console.print(f"[green]✓[/green] {len(sources)} sources → sources/{args.select}/")
 
-    with console.status(f"[bold]Extraindo destinations ({args.env})..."):
-        dests = extract_destinations(client, args.env, ROOT)
-    console.print(f"[green]✓[/green] {len(dests)} destinations → destinations/{args.env}/")
+    with console.status("[bold]Extraindo destinations..."):
+    	dests = extract_destinations(client, args.select, ROOT)
+    console.print(f"[green]✓[/green] {len(dests)} destinations → destinations/{args.select}/")
 
-    with console.status(f"[bold]Extraindo conexões ({args.env})..."):
-        conns = extract_connections(client, args.env, ROOT)
-    console.print(f"[green]✓[/green] {len(conns)} conexões → connections/{args.env}/")
+    with console.status("[bold]Extraindo conexões..."):
+        conns = extract_connections(client, args.select, ROOT)
+    console.print(f"[green]✓[/green] {len(conns)} conexões → connections/{args.select}/")
 
 
 def cmd_push(args):
-    client = get_client(args.env)
+    client = get_client(args.select)
     if args.dry_run:
         console.print("[yellow]DRY RUN — nenhuma mudança será aplicada[/yellow]")
 
-    if args.file:
-        yaml_path = ROOT / "connections" / args.env / args.file
+    if args.select_conn:
+        yaml_path = ROOT / "connections" / args.select / args.select_conn
+        if not yaml_path.exists():
+            # tenta adicionar .yaml se não tiver
+            yaml_path = yaml_path.with_suffix(".yaml")
         if not yaml_path.exists():
             console.print(f"[red]Arquivo {yaml_path} não encontrado.[/red]")
             sys.exit(1)
         try:
-            with console.status(f"[bold]Aplicando {args.file}..."):
-                result = push_connection(client, args.env, yaml_path, dry_run=args.dry_run)
-            console.print(f"[green]✓[/green] {args.file} → {result.get('_action', 'dry-run')}")
+            with console.status(f"[bold]Aplicando {yaml_path.name}..."):
+                result = push_connection(client, args.select, yaml_path, dry_run=args.dry_run)
+            console.print(f"[green]✓[/green] {yaml_path.name} → {result.get('_action', 'dry-run')}")
         except ValueError as e:
-            console.print(f"[red]✗ {args.file}[/red]\n{e}")
+            console.print(f"[red]✗ {yaml_path.name}[/red]\n{e}")
             sys.exit(1)
     else:
-        with console.status(f"[bold]Aplicando conexões em connections/{args.env}/..."):
-            results = push_all_connections(client, args.env, ROOT, dry_run=args.dry_run)
-
-        table = Table(title=f"Push → {args.env}")
-        table.add_column("Arquivo")
-        table.add_column("Status")
-        table.add_column("Detalhe", no_wrap=False)
-
-        for r in results:
-            action = r.get("_action", "dry-run")
-            if action == "error":
-                color, icon = "red", "✗"
-                detail = r.get("_error", "")[:120]
-            elif action in ("created", "updated"):
-                color, icon = "green", "✓"
-                detail = ""
-            else:
-                color, icon = "yellow", "~"
-                detail = ""
-            table.add_row(r["_file"], f"[{color}]{icon} {action}[/{color}]", detail)
-        console.print(table)
+        with console.status("[bold]Aplicando sources..."):
+            src = push_all_sources(client, args.select, ROOT, dry_run=args.dry_run)
+        with console.status("[bold]Aplicando destinations..."):
+            dst = push_all_destinations(client, args.select, ROOT, dry_run=args.dry_run)
+        with console.status("[bold]Aplicando connections..."):
+            conn = push_all_connections(client, args.select, ROOT, dry_run=args.dry_run)
+        _push_table(src + dst + conn, f"Push → {args.select}")
 
 
 def cmd_diff(args):
-    client = get_client(args.env)
-    with console.status(f"[bold]Comparando ({args.env})..."):
-        results = diff_connections(client, args.env, ROOT)
+    client = get_client(args.select)
+    with console.status("[bold]Comparando..."):
+        results = diff_connections(client, args.select, ROOT)
 
-    table = Table(title=f"Diff → {args.env}", show_lines=args.verbose)
+    table = Table(title=f"Diff → {args.select}", show_lines=args.verbose)
     table.add_column("Arquivo / Conexão", min_width=40)
     table.add_column("Status", min_width=12)
     table.add_column("Diferenças", no_wrap=False)
@@ -144,40 +155,28 @@ def cmd_diff(args):
         diff_lines = r.get("diff") or []
 
         if status == "ok":
-            color, icon = "green", "✓"
-            diff_text = ""
+            color, icon, diff_text = "green", "✓", ""
         elif status == "new":
-            color, icon = "blue", "+"
-            diff_text = "não existe no Airbyte ainda"
+            color, icon, diff_text = "blue", "+", "não existe no Airbyte ainda"
         elif status == "changed":
             color, icon = "yellow", "~"
-            if args.verbose:
-                diff_text = "\n".join(diff_lines)
-            else:
-                diff_text = diff_lines[0] if diff_lines else ""
+            diff_text = "\n".join(diff_lines) if args.verbose else (diff_lines[0] if diff_lines else "")
         else:
-            color, icon = "dim", "?"
-            diff_text = "existe no Airbyte mas sem YAML local"
+            color, icon, diff_text = "dim", "?", "existe no Airbyte mas sem YAML local"
 
         table.add_row(label, f"[{color}]{icon} {status}[/{color}]", diff_text)
 
     console.print(table)
 
-    summary = []
-    ok = sum(1 for r in results if r["status"] == "ok")
-    new = sum(1 for r in results if r["status"] == "new")
-    untracked = sum(1 for r in results if r["status"] == "untracked")
-
-    if ok:
-        summary.append(f"[green]{ok} ok[/green]")
-    if changed:
-        summary.append(f"[yellow]{changed} alterada(s)[/yellow]")
-    if new:
-        summary.append(f"[blue]{new} nova(s)[/blue]")
-    if untracked:
-        summary.append(f"[dim]{untracked} não rastreada(s)[/dim]")
-
-    console.print("  ".join(summary))
+    parts = []
+    for status, color, label in [
+        ("ok", "green", "ok"), ("changed", "yellow", "alterada(s)"),
+        ("new", "blue", "nova(s)"), ("untracked", "dim", "não rastreada(s)"),
+    ]:
+        n = sum(1 for r in results if r["status"] == status)
+        if n:
+            parts.append(f"[{color}]{n} {label}[/{color}]")
+    console.print("  ".join(parts))
 
     if changed and not args.verbose:
         console.print("[dim]Use --verbose / -v para ver o diff completo.[/dim]")
@@ -188,28 +187,35 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("list", help="Lista conexões do Airbyte")
-    p.add_argument("--env", default="prod")
+    p.add_argument("--select", "-s", required=True, help="Nome do ambiente (ex: prod, staging)")
 
     p = sub.add_parser("extract", help="Extrai configs do Airbyte → YAML")
-    p.add_argument("--env", default="prod")
+    p.add_argument("--select", "-s", required=True)
 
-    p = sub.add_parser("push", help="Aplica YAMLs no Airbyte")
-    p.add_argument("--env", default="dev")
-    p.add_argument("--file", default=None)
+    p = sub.add_parser("push", help="Aplica YAMLs no Airbyte (sources + destinations + connections)")
+    p.add_argument("--select", "-s", required=True)
+    p.add_argument("--select-conn", default=None, metavar="FILE", help="Aplica só uma connection (ex: minha_conn.yaml)")
     p.add_argument("--dry-run", action="store_true")
 
     p = sub.add_parser("diff", help="Compara YAML local vs Airbyte")
-    p.add_argument("--env", default="prod")
-    p.add_argument("--verbose", "-v", action="store_true", help="Mostra diff completo")
+    p.add_argument("--select", "-s", required=True)
+    p.add_argument("--verbose", "-v", action="store_true")
 
     p = sub.add_parser("workspaces", help="Lista workspaces disponíveis")
-    p.add_argument("--env", default="prod")
+    p.add_argument("--select", "-s", required=True)
 
     args = parser.parse_args()
     args.dry_run = getattr(args, "dry_run", False)
     args.verbose = getattr(args, "verbose", False)
+    args.select_conn = getattr(args, "select_conn", None)
 
-    {"list": cmd_list, "extract": cmd_extract, "push": cmd_push, "diff": cmd_diff, "workspaces": cmd_workspaces}[args.command](args)
+    {
+        "list": cmd_list,
+        "extract": cmd_extract,
+        "push": cmd_push,
+        "diff": cmd_diff,
+        "workspaces": cmd_workspaces,
+    }[args.command](args)
 
 
 if __name__ == "__main__":

@@ -1,27 +1,27 @@
-ENV     ?= prod
+SELECT  ?= prod
 FILE    ?=
 VERBOSE ?=
 
-_verbose = $(if $(VERBOSE),--verbose,)
-_file    = $(if $(FILE),--file=$(FILE),)
+_verbose     = $(if $(VERBOSE),--verbose,)
+_select_conn = $(if $(FILE),--select-conn=$(FILE),)
 
 install:
 	pip install -r requirements.txt
 
 extract:
-	python cli.py extract --env=$(ENV)
+	python cli.py extract --select=$(SELECT)
 
 diff:
-	python cli.py diff --env=$(ENV) $(_verbose)
+	python cli.py diff --select=$(SELECT) $(_verbose)
 
 list:
-	python cli.py list --env=$(ENV)
+	python cli.py list --select=$(SELECT)
 
 push:
-	python cli.py push --env=$(ENV) $(_file)
+	python cli.py push --select=$(SELECT) $(_select_conn)
 
 dry-run:
-	python cli.py push --env=$(ENV) --dry-run $(_file)
+	python cli.py push --select=$(SELECT) --dry-run $(_select_conn)
 
 workspaces:
-	python cli.py workspaces --env=$(ENV)
+	python cli.py workspaces --select=$(SELECT)

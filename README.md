@@ -15,9 +15,9 @@ Airbyte (prod) ──extract──▶ YAML files ──git commit──▶ main 
                                                               │
                                                     edit YAML / add streams
                                                               │
-                                               make diff ENV=dev  ◀── compare
+                                               make diff SELECT=dev  ◀── compare
                                                               │
-                                               make push ENV=dev  ◀── apply
+                                               make push SELECT=dev  ◀── apply
 ```
 
 **One environment per branch.** There are no `dev/` and `prod/` subfolders — the branch itself is the environment. Checkout `main` to manage prod; create a feature branch to test changes before promoting.
@@ -57,14 +57,16 @@ Three methods are supported (in priority order):
 
 | Command | Description |
 |---------|-------------|
-| `make extract ENV=prod` | Pull all connections, sources and destinations from Airbyte → YAML |
-| `make diff ENV=prod` | Compare local YAMLs against live Airbyte state |
-| `make diff ENV=prod VERBOSE=1` | Full diff with all changed fields |
-| `make list ENV=prod` | List all connections with status and schedule |
-| `make push ENV=prod` | Apply all local YAMLs to Airbyte (create or update) |
-| `make push ENV=prod FILE=my_conn.yaml` | Apply a single connection |
-| `make dry-run ENV=prod` | Simulate push without applying changes |
-| `make workspaces ENV=prod` | List available workspaces |
+| `make extract SELECT=prod` | Pull all connections, sources and destinations from Airbyte → YAML |
+| `make diff SELECT=prod` | Compare local YAMLs against live Airbyte state |
+| `make diff SELECT=prod VERBOSE=1` | Full diff with all changed fields |
+| `make list SELECT=prod` | List all connections with status and schedule |
+| `make push SELECT=prod` | Apply everything: sources → destinations → connections |
+| `make push SELECT=prod FILE=my_conn.yaml` | Apply a single connection |
+| `make dry-run SELECT=prod` | Simulate push without applying changes |
+| `make workspaces SELECT=prod` | List available workspaces |
+
+`SELECT` can be any name — it loads `.env.{SELECT}` and saves/reads from `connections/{SELECT}/`. Examples: `prod`, `staging`, `autoforce`, `local`.|
 
 ---
 
@@ -74,7 +76,7 @@ Three methods are supported (in priority order):
 
 ```bash
 # Pull everything from prod and commit
-make extract ENV=prod
+make extract SELECT=prod
 git add -A
 git commit -m "chore: initial extract from prod"
 git push origin main
@@ -90,10 +92,10 @@ git checkout -b feat/zendesk-schedule
 vim connections/prod/zendsk_to_snow.yaml
 
 # Check what will change before applying
-make diff ENV=prod --verbose
+make diff SELECT=prod --verbose
 
 # Apply
-make push ENV=prod FILE=zendsk_to_snow.yaml
+make push SELECT=prod FILE=zendsk_to_snow.yaml
 
 # Commit the new state
 git add -A
