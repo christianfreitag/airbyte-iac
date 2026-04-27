@@ -17,7 +17,6 @@ def _index_by_name(items: list) -> dict:
 
 
 def _fmt_path(raw: str) -> str:
-    """'root[\'schedule\'][\'cron\'][\'cronExpression\']' → 'schedule.cron.cronExpression'"""
     parts = re.findall(r"\['([^']+)'\]|\[(\d+)\]", raw)
     result = []
     for word, idx in parts:
@@ -33,12 +32,10 @@ def _format_diff(diff: DeepDiff) -> list[str]:
     d = json.loads(diff.to_json())
 
     for path, change in d.get("values_changed", {}).items():
-        field = _fmt_path(path)
-        lines.append(f"{field}: {change['old_value']!r} → {change['new_value']!r}")
+        lines.append(f"{_fmt_path(path)}: {change['old_value']!r} → {change['new_value']!r}")
 
     for path, change in d.get("type_changes", {}).items():
-        field = _fmt_path(path)
-        lines.append(f"{field}: {change['old_value']!r} → {change['new_value']!r}")
+        lines.append(f"{_fmt_path(path)}: {change['old_value']!r} → {change['new_value']!r}")
 
     for path in d.get("dictionary_item_added", []):
         lines.append(f"+ {_fmt_path(str(path))}")
@@ -57,9 +54,22 @@ def _format_diff(diff: DeepDiff) -> list[str]:
     return lines
 
 
-def diff_connections(client: AirbyteClient, env: str, output_dir: Path) -> list:
-    conn_dir = output_dir / "connections" / env
-    if not conn_dir.exists():
+def diff_connections(client: AirbyteClient, infra: str, root: Path, select: str = None) -> list:
+    conn_base = root / "infras" / infra / "connections"
+    if not conn_base.exists():
+        return []
+
+    if select:
+        folders = [conn_base / select] if (conn_base / select).exists() else []
+    else:
+        folders = sorted(f for f in conn_base.iterdir() if f.is_dir())
+
+    yaml_files = []
+    for folder in folders:
+        for f in sorted(folder.glob("*.yaml")):
+            yaml_files.append((folder.name, f))
+
+    if not yaml_files:
         return []
 
     existing = _index_by_name(client.list_connections())
@@ -67,16 +77,19 @@ def diff_connections(client: AirbyteClient, env: str, output_dir: Path) -> list:
     destinations = {d["destinationId"]: d["name"] for d in client.list_destinations()}
 
     results = []
-    for yaml_file in sorted(conn_dir.glob("*.yaml")):
+    local_names = set()
+
+    for folder_name, yaml_file in yaml_files:
         local = _load_yaml(yaml_file)
         name = local["name"]
+        local_names.add(name)
+        label = f"{folder_name}/{yaml_file.name}"
 
         if name not in existing:
-            results.append({"file": yaml_file.name, "status": "new", "diff": []})
+            results.append({"file": label, "status": "new", "diff": []})
             continue
 
         conn = existing[name]
-
         schedule_type = conn.get("scheduleType", "manual")
         schedule_data = conn.get("scheduleData") or None
         if schedule_type == "manual":
@@ -120,15 +133,10 @@ def diff_connections(client: AirbyteClient, env: str, output_dir: Path) -> list:
         ddiff = DeepDiff(remote, local_cmp, ignore_order=True)
 
         if ddiff:
-            results.append({
-                "file": yaml_file.name,
-                "status": "changed",
-                "diff": _format_diff(ddiff),
-            })
+            results.append({"file": label, "status": "changed", "diff": _format_diff(ddiff)})
         else:
-            results.append({"file": yaml_file.name, "status": "ok", "diff": []})
+            results.append({"file": label, "status": "ok", "diff": []})
 
-    local_names = {_load_yaml(f)["name"] for f in conn_dir.glob("*.yaml")}
     for name in existing:
         if name not in local_names:
             results.append({"file": None, "status": "untracked", "name": name, "diff": []})

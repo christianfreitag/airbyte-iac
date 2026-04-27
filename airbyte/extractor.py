@@ -1,8 +1,9 @@
 """Extrai conexões, sources e destinations do Airbyte e salva como YAML."""
-import os
 import yaml
 from pathlib import Path
 from .client import AirbyteClient
+
+TAG_PREFIX = "select:"
 
 
 def _slug(name: str) -> str:
@@ -11,15 +12,27 @@ def _slug(name: str) -> str:
         name = name.replace(ch, "to")
     for ch in (" ", "/", "\\", ":", "*", "?", '"', "|", "[", "]"):
         name = name.replace(ch, "_")
-    # colapsa múltiplos underscores
     while "__" in name:
         name = name.replace("__", "_")
     return name.strip("_")
 
 
-def extract_sources(client: AirbyteClient, env: str, output_dir: Path):
+def _select_tag(tags: list) -> str:
+    for tag in tags:
+        if isinstance(tag, str) and tag.lower().startswith(TAG_PREFIX):
+            return tag[len(TAG_PREFIX):].strip()
+    return "_other"
+
+
+def _write_yaml(path: Path, data: dict):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+
+def extract_sources(client: AirbyteClient, infra: str, root: Path):
     sources = client.list_sources()
-    out = output_dir / "sources" / env
+    out = root / "infras" / infra / "sources"
     out.mkdir(parents=True, exist_ok=True)
 
     for src in sources:
@@ -28,16 +41,14 @@ def extract_sources(client: AirbyteClient, env: str, output_dir: Path):
             "source_definition": src.get("sourceName", ""),
             "connection_configuration": src.get("connectionConfiguration", {}),
         }
-        file = out / f"{_slug(src['name'])}.yaml"
-        with open(file, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        _write_yaml(out / f"{_slug(src['name'])}.yaml", data)
 
     return sources
 
 
-def extract_destinations(client: AirbyteClient, env: str, output_dir: Path):
+def extract_destinations(client: AirbyteClient, infra: str, root: Path):
     destinations = client.list_destinations()
-    out = output_dir / "destinations" / env
+    out = root / "infras" / infra / "destinations"
     out.mkdir(parents=True, exist_ok=True)
 
     for dst in destinations:
@@ -46,29 +57,29 @@ def extract_destinations(client: AirbyteClient, env: str, output_dir: Path):
             "destination_definition": dst.get("destinationName", ""),
             "connection_configuration": dst.get("connectionConfiguration", {}),
         }
-        file = out / f"{_slug(dst['name'])}.yaml"
-        with open(file, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        _write_yaml(out / f"{_slug(dst['name'])}.yaml", data)
 
     return destinations
 
 
-def extract_connections(client: AirbyteClient, env: str, output_dir: Path):
+def extract_connections(client: AirbyteClient, infra: str, root: Path, select: str = None):
     connections = client.list_connections()
     sources = {s["sourceId"]: s["name"] for s in client.list_sources()}
     destinations = {d["destinationId"]: d["name"] for d in client.list_destinations()}
 
-    out = output_dir / "connections" / env
-    out.mkdir(parents=True, exist_ok=True)
-
     for conn in connections:
+        tag = _select_tag(conn.get("tags", []))
+
+        if select and tag != select:
+            continue
+
         source_name = sources.get(conn["sourceId"], conn["sourceId"])
         destination_name = destinations.get(conn["destinationId"], conn["destinationId"])
 
         streams = []
-        for stream_entry in conn.get("syncCatalog", {}).get("streams", []):
-            stream = stream_entry.get("stream", {})
-            config = stream_entry.get("config", {})
+        for se in conn.get("syncCatalog", {}).get("streams", []):
+            stream = se.get("stream", {})
+            config = se.get("config", {})
             if not config.get("selected", False):
                 continue
             streams.append({
@@ -80,8 +91,10 @@ def extract_connections(client: AirbyteClient, env: str, output_dir: Path):
                 "primary_key": config.get("primaryKey", []),
             })
 
-        schedule = conn.get("scheduleData", {})
         schedule_type = conn.get("scheduleType", "manual")
+        schedule = conn.get("scheduleData") or None
+        if schedule_type == "manual":
+            schedule = None
 
         data = {
             "name": conn["name"],
@@ -89,18 +102,16 @@ def extract_connections(client: AirbyteClient, env: str, output_dir: Path):
             "destination": destination_name,
             "status": conn.get("status", "active"),
             "schedule_type": schedule_type,
-            "schedule": schedule if schedule_type != "manual" else None,
+            "schedule": schedule,
             "namespace_definition": conn.get("namespaceDefinition", "source"),
             "namespace_format": conn.get("namespaceFormat", ""),
             "prefix": conn.get("prefix", ""),
             "tags": conn.get("tags", []),
             "streams": streams,
         }
-        # remove None values
         data = {k: v for k, v in data.items() if v is not None}
 
-        file = out / f"{_slug(conn['name'])}.yaml"
-        with open(file, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        out = root / "infras" / infra / "connections" / tag
+        _write_yaml(out / f"{_slug(conn['name'])}.yaml", data)
 
     return connections

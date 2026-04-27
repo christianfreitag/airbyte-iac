@@ -1,27 +1,29 @@
-SELECT  ?= prod
+INFRA   ?= prod
+SELECT  ?=
 FILE    ?=
 VERBOSE ?=
 
-_verbose     = $(if $(VERBOSE),--verbose,)
-_select_conn = $(if $(FILE),--select-conn=$(FILE),)
+_select  = $(if $(SELECT),--select=$(SELECT),)
+_file    = $(if $(FILE),--file=$(FILE),)
+_verbose = $(if $(VERBOSE),--verbose,)
 
 install:
 	pip install -r requirements.txt
 
 extract:
-	python cli.py extract --select=$(SELECT)
+	python cli.py extract --infra=$(INFRA) $(_select)
 
 diff:
-	python cli.py diff --select=$(SELECT) $(_verbose)
+	python cli.py diff --infra=$(INFRA) $(_select) $(_verbose)
 
 list:
-	python cli.py list --select=$(SELECT)
+	python cli.py list --infra=$(INFRA)
 
 push:
-	python cli.py push --select=$(SELECT) $(_select_conn)
+	python cli.py push --infra=$(INFRA) $(_select) $(_file)
 
 dry-run:
-	python cli.py push --select=$(SELECT) --dry-run $(_select_conn)
+	python cli.py push --infra=$(INFRA) $(_select) $(_file) --dry-run
 
 workspaces:
-	python cli.py workspaces --select=$(SELECT)
+	python cli.py workspaces --infra=$(INFRA)

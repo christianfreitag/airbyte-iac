@@ -15,9 +15,9 @@ def _index_by_name(items: list, key: str = "name") -> dict:
     return {item[key]: item for item in items}
 
 
-def _run_all(fn, yaml_dir: Path) -> list:
+def _collect_results(fn, yaml_files) -> list:
     results, errors = [], []
-    for yaml_file in sorted(yaml_dir.glob("*.yaml")):
+    for yaml_file in yaml_files:
         try:
             result = fn(yaml_file)
         except Exception as e:
@@ -28,7 +28,7 @@ def _run_all(fn, yaml_dir: Path) -> list:
     return results + errors
 
 
-# ── Sources ──────────────────────────────────────────────────────────────────
+# ── Sources ───────────────────────────────────────────────────────────────────
 
 def push_source(client: AirbyteClient, yaml_path: Path, dry_run: bool = False) -> dict:
     data = _load_yaml(yaml_path)
@@ -41,28 +41,18 @@ def push_source(client: AirbyteClient, yaml_path: Path, dry_run: bool = False) -
 
     if validated.name in existing:
         source_id = existing[validated.name]["sourceId"]
-        # Envia connectionConfiguration de volta — campos mascarados (**) são
-        # preservados pelo Airbyte, campos em texto são atualizados.
-        config = {
-            "name": validated.name,
-            "connectionConfiguration": validated.connection_configuration,
-        }
+        config = {"name": validated.name, "connectionConfiguration": validated.connection_configuration}
         if dry_run:
             return {"_action": "dry-run", "name": validated.name}
         result = client.update_source(source_id, config)
         result["_action"] = "updated"
     else:
-        # Criar source nova requer credenciais reais no YAML
         definitions = {d["name"]: d for d in client.list_source_definitions()}
         if validated.source_definition not in definitions:
-            raise ValueError(
-                f"Source definition '{validated.source_definition}' não encontrada. "
-                f"Verifique o nome exato em: make list-definitions ENV=..."
-            )
-        definition_id = definitions[validated.source_definition]["sourceDefinitionId"]
+            raise ValueError(f"Source definition '{validated.source_definition}' não encontrada.")
         config = {
             "name": validated.name,
-            "sourceDefinitionId": definition_id,
+            "sourceDefinitionId": definitions[validated.source_definition]["sourceDefinitionId"],
             "connectionConfiguration": validated.connection_configuration,
         }
         if dry_run:
@@ -73,14 +63,14 @@ def push_source(client: AirbyteClient, yaml_path: Path, dry_run: bool = False) -
     return result
 
 
-def push_all_sources(client: AirbyteClient, env: str, output_dir: Path, dry_run: bool = False) -> list:
-    d = output_dir / "sources" / env
+def push_all_sources(client: AirbyteClient, infra: str, root: Path, dry_run: bool = False) -> list:
+    d = root / "infras" / infra / "sources"
     if not d.exists():
-        raise FileNotFoundError(f"Pasta {d} não encontrada. Rode make extract primeiro.")
-    return _run_all(lambda f: push_source(client, f, dry_run), d)
+        return []
+    return _collect_results(lambda f: push_source(client, f, dry_run), sorted(d.glob("*.yaml")))
 
 
-# ── Destinations ─────────────────────────────────────────────────────────────
+# ── Destinations ──────────────────────────────────────────────────────────────
 
 def push_destination(client: AirbyteClient, yaml_path: Path, dry_run: bool = False) -> dict:
     data = _load_yaml(yaml_path)
@@ -93,10 +83,7 @@ def push_destination(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fal
 
     if validated.name in existing:
         destination_id = existing[validated.name]["destinationId"]
-        config = {
-            "name": validated.name,
-            "connectionConfiguration": validated.connection_configuration,
-        }
+        config = {"name": validated.name, "connectionConfiguration": validated.connection_configuration}
         if dry_run:
             return {"_action": "dry-run", "name": validated.name}
         result = client.update_destination(destination_id, config)
@@ -104,13 +91,10 @@ def push_destination(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fal
     else:
         definitions = {d["name"]: d for d in client.list_destination_definitions()}
         if validated.destination_definition not in definitions:
-            raise ValueError(
-                f"Destination definition '{validated.destination_definition}' não encontrada."
-            )
-        definition_id = definitions[validated.destination_definition]["destinationDefinitionId"]
+            raise ValueError(f"Destination definition '{validated.destination_definition}' não encontrada.")
         config = {
             "name": validated.name,
-            "destinationDefinitionId": definition_id,
+            "destinationDefinitionId": definitions[validated.destination_definition]["destinationDefinitionId"],
             "connectionConfiguration": validated.connection_configuration,
         }
         if dry_run:
@@ -121,18 +105,17 @@ def push_destination(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fal
     return result
 
 
-def push_all_destinations(client: AirbyteClient, env: str, output_dir: Path, dry_run: bool = False) -> list:
-    d = output_dir / "destinations" / env
+def push_all_destinations(client: AirbyteClient, infra: str, root: Path, dry_run: bool = False) -> list:
+    d = root / "infras" / infra / "destinations"
     if not d.exists():
-        raise FileNotFoundError(f"Pasta {d} não encontrada. Rode make extract primeiro.")
-    return _run_all(lambda f: push_destination(client, f, dry_run), d)
+        return []
+    return _collect_results(lambda f: push_destination(client, f, dry_run), sorted(d.glob("*.yaml")))
 
 
 # ── Connections ───────────────────────────────────────────────────────────────
 
-def push_connection(client: AirbyteClient, env: str, yaml_path: Path, dry_run: bool = False) -> dict:
+def push_connection(client: AirbyteClient, yaml_path: Path, dry_run: bool = False) -> dict:
     data = _load_yaml(yaml_path)
-
     try:
         validated = ConnectionConfig(**data)
     except ValidationError as e:
@@ -142,30 +125,29 @@ def push_connection(client: AirbyteClient, env: str, yaml_path: Path, dry_run: b
     destinations = _index_by_name(client.list_destinations())
 
     if validated.source not in sources:
-        raise ValueError(f"Source '{validated.source}' não encontrada. Rode push-sources primeiro.")
+        raise ValueError(f"Source '{validated.source}' não encontrada.")
     if validated.destination not in destinations:
-        raise ValueError(f"Destination '{validated.destination}' não encontrada. Rode push-destinations primeiro.")
+        raise ValueError(f"Destination '{validated.destination}' não encontrada.")
 
     source_id = sources[validated.source]["sourceId"]
     destination_id = destinations[validated.destination]["destinationId"]
 
-    existing_schema = client.discover_schema(source_id)
     schema_streams = {
         s["stream"]["name"]: s
-        for s in existing_schema.get("catalog", {}).get("streams", [])
+        for s in client.discover_schema(source_id).get("catalog", {}).get("streams", [])
     }
 
     sync_streams = []
-    for stream_def in validated.streams:
-        if stream_def.name not in schema_streams:
-            raise ValueError(f"Stream '{stream_def.name}' não existe na source '{validated.source}'.")
-        base = schema_streams[stream_def.name]
+    for sd in validated.streams:
+        if sd.name not in schema_streams:
+            raise ValueError(f"Stream '{sd.name}' não existe na source '{validated.source}'.")
+        base = schema_streams[sd.name]
         base["config"] = {
             "selected": True,
-            "syncMode": stream_def.sync_mode,
-            "destinationSyncMode": stream_def.destination_sync_mode,
-            "cursorField": stream_def.cursor_field,
-            "primaryKey": stream_def.primary_key,
+            "syncMode": sd.sync_mode,
+            "destinationSyncMode": sd.destination_sync_mode,
+            "cursorField": sd.cursor_field,
+            "primaryKey": sd.primary_key,
         }
         sync_streams.append(base)
 
@@ -184,7 +166,7 @@ def push_connection(client: AirbyteClient, env: str, yaml_path: Path, dry_run: b
     }
 
     if dry_run:
-        return {"_action": "dry-run", "config": config}
+        return {"_action": "dry-run", "name": validated.name}
 
     existing = _index_by_name(client.list_connections())
     if validated.name in existing:
@@ -198,8 +180,25 @@ def push_connection(client: AirbyteClient, env: str, yaml_path: Path, dry_run: b
     return result
 
 
-def push_all_connections(client: AirbyteClient, env: str, output_dir: Path, dry_run: bool = False) -> list:
-    d = output_dir / "connections" / env
-    if not d.exists():
-        raise FileNotFoundError(f"Pasta {d} não encontrada.")
-    return _run_all(lambda f: push_connection(client, env, f, dry_run), d)
+def push_all_connections(client: AirbyteClient, infra: str, root: Path, select: str = None, dry_run: bool = False) -> list:
+    conn_base = root / "infras" / infra / "connections"
+    if not conn_base.exists():
+        return []
+
+    if select:
+        folders = [conn_base / select] if (conn_base / select).exists() else []
+    else:
+        folders = sorted(f for f in conn_base.iterdir() if f.is_dir())
+
+    results = []
+    for folder in folders:
+        for yaml_file in sorted(folder.glob("*.yaml")):
+            try:
+                result = push_connection(client, yaml_file, dry_run=dry_run)
+            except Exception as e:
+                results.append({"_file": f"{folder.name}/{yaml_file.name}", "_action": "error", "_error": str(e)})
+                continue
+            result["_file"] = f"{folder.name}/{yaml_file.name}"
+            results.append(result)
+
+    return results
