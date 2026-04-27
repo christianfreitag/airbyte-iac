@@ -386,6 +386,17 @@ def cmd_setup_infra(args):
         subprocess.run([sys.executable, str(ROOT / "cli.py"), "pull", f"--target={infra}"], check=False)
 
 
+def cmd_sync(args):
+    if not args.from_infra or not args.infra:
+        console.print("[red]sync requer TARGET e FROM. Ex: make sync TARGET=dev FROM=prod[/red]")
+        sys.exit(1)
+    target, source = args.infra, args.from_infra
+    args.infra = source
+    cmd_extract(args)
+    args.infra, args.from_infra = target, source
+    cmd_push(args)
+
+
 def cmd_clean_local(args):
     import shutil
     path = ROOT / "targets" / args.infra
@@ -519,7 +530,7 @@ def main():
             "init":       cmd_setup_infra,
             "clone":      cmd_clone_infra,
             "clean":      cmd_clean_local,
-            "sync":       lambda a: (cmd_extract(a) or cmd_push(a)),
+            "sync":       cmd_sync,
         }[args.command](args)
 
 

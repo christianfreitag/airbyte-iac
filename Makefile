@@ -32,8 +32,7 @@ status:
 	python cli.py status $(_target) $(_select) $(_verbose)
 
 sync:
-	python cli.py pull --target=$(FROM)
-	python cli.py push --target=$(TARGET) --from=$(FROM) $(_select)
+	python cli.py sync $(_target) $(_from) $(_select)
 
 list:
 	python cli.py list $(_target)
