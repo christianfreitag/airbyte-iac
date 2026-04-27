@@ -386,6 +386,19 @@ def cmd_setup_infra(args):
         subprocess.run([sys.executable, str(ROOT / "cli.py"), "pull", f"--target={infra}"], check=False)
 
 
+def cmd_clean_local(args):
+    import shutil
+    path = ROOT / "targets" / args.infra
+    if not path.exists():
+        console.print(f"[yellow]targets/{args.infra}/ não existe.[/yellow]")
+        return
+    if _ask(f"  [yellow]Apagar targets/{args.infra}/?[/yellow] (y|n): ").strip().lower() != "y":
+        console.print("  Cancelado.")
+        return
+    shutil.rmtree(path)
+    console.print(f"  [green]✓[/green] targets/{args.infra}/ removida.")
+
+
 def cmd_clone_infra(args):
     src = ROOT / "targets" / args.from_infra
     dst = ROOT / "targets" / args.infra
@@ -429,10 +442,10 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("list",       help="Lista conexões do Airbyte")
-    p.add_argument("--target", "-t", required=True)
+    p.add_argument("--target", "-t", default=None)
 
     p = sub.add_parser("pull",       help="Extrai configs do Airbyte → YAML")
-    p.add_argument("--target", "-t", required=True)
+    p.add_argument("--target", "-t", default=None)
     p.add_argument("--select", "-s", default=None)
 
     p = sub.add_parser("push",       help="Aplica YAMLs no Airbyte")
@@ -443,7 +456,7 @@ def main():
     p.add_argument("--dry-run",      action="store_true")
 
     p = sub.add_parser("status",     help="Compara YAML local vs Airbyte")
-    p.add_argument("--target", "-t", required=True)
+    p.add_argument("--target", "-t", default=None)
     p.add_argument("--select", "-s", default=None)
     p.add_argument("--verbose","-v", action="store_true")
 
@@ -454,6 +467,9 @@ def main():
     p.add_argument("--target", "-t", required=True)
 
     sub.add_parser("init",           help="Configura um novo target interativamente")
+
+    p = sub.add_parser("clean",      help="Apaga pasta targets/{target}/ local")
+    p.add_argument("--target", "-t", required=True)
 
     p = sub.add_parser("clone",      help="Clona YAMLs de um target para outro")
     p.add_argument("--target", "-t", required=True)
@@ -472,17 +488,39 @@ def main():
     args.infra      = getattr(args, "target", None)
     args.from_infra = getattr(args, "from_target", None)
 
-    {
-        "list":       cmd_list,
-        "pull":       cmd_extract,
-        "push":       cmd_push,
-        "status":     cmd_diff,
-        "workspaces": cmd_workspaces,
-        "reset":      cmd_clean_airbyte,
-        "init":       cmd_setup_infra,
-        "clone":      cmd_clone_infra,
-        "sync":       lambda a: (cmd_extract(a) or cmd_push(a)),
-    }[args.command](args)
+    def _all_targets():
+        d = ROOT / "targets"
+        if not d.exists():
+            return []
+        return sorted(t.name for t in d.iterdir() if t.is_dir())
+
+    def _run_all(fn):
+        targets = _all_targets()
+        if not targets:
+            console.print("[yellow]Nenhum target encontrado em targets/[/yellow]")
+            return
+        for t in targets:
+            args.infra = t
+            fn(args)
+
+    cmd = args.command
+    if cmd in ("pull", "status", "list") and not args.infra:
+        {"pull": lambda: _run_all(cmd_extract),
+         "status": lambda: _run_all(cmd_diff),
+         "list": lambda: _run_all(cmd_list)}[cmd]()
+    else:
+        {
+            "list":       cmd_list,
+            "pull":       cmd_extract,
+            "push":       cmd_push,
+            "status":     cmd_diff,
+            "workspaces": cmd_workspaces,
+            "reset":      cmd_clean_airbyte,
+            "init":       cmd_setup_infra,
+            "clone":      cmd_clone_infra,
+            "clean":      cmd_clean_local,
+            "sync":       lambda a: (cmd_extract(a) or cmd_push(a)),
+        }[args.command](args)
 
 
 if __name__ == "__main__":
