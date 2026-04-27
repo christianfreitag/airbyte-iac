@@ -4,5 +4,4 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-targets/*
-!targets/example
+targets/
