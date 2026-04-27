@@ -1,6 +1,8 @@
-.env.prod
-.env.dev
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 .venv/
 venv/
+infras/*
+!infras/example

@@ -113,7 +113,7 @@ def extract_connections(client: AirbyteClient, infra: str, root: Path, select: s
             "namespace_definition": conn.get("namespaceDefinition", "source"),
             "namespace_format": conn.get("namespaceFormat", ""),
             "prefix": conn.get("prefix", ""),
-            "tags": [t["name"] if isinstance(t, dict) else t for t in conn.get("tags", [])],
+            "tags": [{"name": t["name"], "color": t.get("color", "B4D9FB")} if isinstance(t, dict) else {"name": t, "color": "B4D9FB"} for t in conn.get("tags", [])],
             "streams": streams,
         }
         data = {k: v for k, v in data.items() if v is not None}

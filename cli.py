@@ -122,14 +122,17 @@ def cmd_extract(args):
 
 def cmd_push(args):
     client = get_client(args.infra)
+    source_infra = args.from_infra or args.infra
     if args.dry_run:
         console.print("[yellow]DRY RUN — nenhuma mudança será aplicada[/yellow]")
+    if args.from_infra:
+        console.print(f"[dim]Lendo YAMLs de infras/{source_infra}/ → enviando para {args.infra}[/dim]")
 
     if args.file:
         if not args.select:
             console.print("[red]--file requer --select (ex: make push INFRA=prod SELECT=ga4 FILE=conn.yaml)[/red]")
             sys.exit(1)
-        yaml_path = ROOT / "infras" / args.infra / "connections" / args.select / args.file
+        yaml_path = ROOT / "infras" / source_infra / "connections" / args.select / args.file
         if not yaml_path.exists():
             yaml_path = yaml_path.with_suffix(".yaml")
         if not yaml_path.exists():
@@ -146,13 +149,14 @@ def cmd_push(args):
 
     # sources e destinations sempre primeiro — connections dependem delas
     with console.status("[bold]Aplicando sources..."):
-        src = push_all_sources(client, args.infra, ROOT, dry_run=args.dry_run)
+        src = push_all_sources(client, source_infra, ROOT, dry_run=args.dry_run)
     with console.status("[bold]Aplicando destinations..."):
-        dst = push_all_destinations(client, args.infra, ROOT, dry_run=args.dry_run)
+        dst = push_all_destinations(client, source_infra, ROOT, dry_run=args.dry_run)
     with console.status(f"[bold]Aplicando connections{f' ({args.select})' if args.select else ''}..."):
-        conn = push_all_connections(client, args.infra, ROOT, select=args.select, dry_run=args.dry_run)
+        conn = push_all_connections(client, source_infra, ROOT, select=args.select, dry_run=args.dry_run)
 
-    title = f"Push → {args.infra}" + (f"/{args.select}" if args.select else "")
+    title = f"Push {source_infra} → {args.infra}" if args.from_infra else f"Push → {args.infra}"
+    title += f"/{args.select}" if args.select else ""
     _push_table(src + dst + conn, title)
 
 
@@ -216,6 +220,7 @@ def main():
 
     p = sub.add_parser("push", help="Aplica YAMLs no Airbyte")
     p.add_argument("--infra", "-i", required=True)
+    p.add_argument("--from", dest="from_infra", default=None, help="Lê YAMLs de outro infra (ex: --from=prod)")
     p.add_argument("--select", "-s", default=None, help="Aplica só um grupo (ex: ga4)")
     p.add_argument("--file", "-f", default=None, help="Aplica só um arquivo (requer --select)")
     p.add_argument("--dry-run", action="store_true")

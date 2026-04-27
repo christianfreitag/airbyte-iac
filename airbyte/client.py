@@ -9,7 +9,7 @@ def _make_session() -> requests.Session:
     retry = Retry(
         total=3,
         backoff_factor=2,
-        status_forcelist=[500, 502, 503, 504],
+        status_forcelist=[502, 503, 504],
         allowed_methods=["GET", "POST"],
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -91,9 +91,13 @@ class AirbyteClient:
         resp = self._post("tags/list", {"workspaceId": self.workspace_id})
         return resp if isinstance(resp, list) else resp.get("tags", [])
 
-    def create_tag(self, name: str) -> dict:
-        resp = self._post("tags/create", {"workspaceId": self.workspace_id, "name": name})
+    def create_tag(self, name: str, color: str = "B4D9FB") -> dict:
+        resp = self._post("tags/create", {"workspaceId": self.workspace_id, "name": name, "color": color})
         return resp if isinstance(resp, dict) else {"tagId": resp, "name": name}
+
+    def update_tag(self, tag_id: str, name: str, color: str) -> dict:
+        resp = self._post("tags/update", {"workspaceId": self.workspace_id, "tagId": tag_id, "name": name, "color": color})
+        return resp if isinstance(resp, dict) else {"tagId": tag_id, "name": name}
 
     # --- Sources ---
 

@@ -125,17 +125,33 @@ def push_connection(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fals
     # se a versão do Airbyte não suportar a API de tags, pula silenciosamente
     resolved_tags = []
     try:
-        existing_tags = {t["name"]: t["tagId"] for t in client.list_tags()}
+        existing_tags = {t["name"]: t for t in client.list_tags()}
         for tag_name in validated.tags:
             name = tag_name if isinstance(tag_name, str) else tag_name.get("name", "")
             if not name:
                 continue
-            if name not in existing_tags:
-                created = client.create_tag(name)
-                existing_tags[name] = created["tagId"]
-            resolved_tags.append({"tagId": existing_tags[name], "name": name})
+            color = tag_name.get("color", "B4D9FB") if isinstance(tag_name, dict) else "B4D9FB"
+            if name in existing_tags:
+                tag = existing_tags[name]
+                tag_id = tag["tagId"]
+                try:
+                    if tag.get("color") != color:
+                        client.update_tag(tag_id, name, color)
+                except Exception:
+                    pass
+                resolved_tags.append({"tagId": tag_id, "name": name})
+            else:
+                try:
+                    created = client.create_tag(name, color=color)
+                    resolved_tags.append({"tagId": created["tagId"], "name": name})
+                    existing_tags[name] = created
+                except Exception:
+                    resolved_tags.append({"name": name})
     except Exception:
-        pass
+        for tag_name in validated.tags:
+            name = tag_name if isinstance(tag_name, str) else tag_name.get("name", "")
+            if name:
+                resolved_tags.append({"name": name})
 
     sources = _index_by_name(client.list_sources())
     destinations = _index_by_name(client.list_destinations())
