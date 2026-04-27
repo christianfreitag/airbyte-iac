@@ -11,18 +11,9 @@ namespace_definition: destination
 namespace_format: ''
 prefix: zendesk_
 tags:
-- tagId: b10f0be2-c103-41e6-a6ec-c99d16f5a614
-  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
-  name: prod
-  color: F93E47
-- tagId: 532f0db9-ff81-41c2-91de-fbd32eaf2977
-  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
-  name: Ingest
-  color: 8487E1
-- tagId: 0cbae175-7cce-462e-9abf-9449f7f91f14
-  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
-  name: select:zendesk
-  color: FBECB1
+- prod
+- Ingest
+- select:zendesk
 streams:
 - name: deleted_tickets
   namespace: ''

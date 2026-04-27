@@ -121,6 +121,22 @@ def push_connection(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fals
     except ValidationError as e:
         raise ValueError(f"YAML inválido em {yaml_path.name}:\n{e}") from e
 
+    # resolve tags por nome no workspace de destino (cria se não existir)
+    # se a versão do Airbyte não suportar a API de tags, pula silenciosamente
+    resolved_tags = []
+    try:
+        existing_tags = {t["name"]: t["tagId"] for t in client.list_tags()}
+        for tag_name in validated.tags:
+            name = tag_name if isinstance(tag_name, str) else tag_name.get("name", "")
+            if not name:
+                continue
+            if name not in existing_tags:
+                created = client.create_tag(name)
+                existing_tags[name] = created["tagId"]
+            resolved_tags.append({"tagId": existing_tags[name], "name": name})
+    except Exception:
+        pass
+
     sources = _index_by_name(client.list_sources())
     destinations = _index_by_name(client.list_destinations())
 
@@ -163,7 +179,7 @@ def push_connection(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fals
         "namespaceDefinition": validated.namespace_definition,
         "namespaceFormat": validated.namespace_format,
         "prefix": validated.prefix,
-        "tags": validated.tags,
+        "tags": resolved_tags,
         "syncCatalog": {"streams": sync_streams},
     }
 

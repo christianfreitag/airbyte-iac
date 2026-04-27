@@ -85,6 +85,16 @@ class AirbyteClient:
     def list_workspaces(self) -> list:
         return self._post("workspaces/list", {})["workspaces"]
 
+    # --- Tags ---
+
+    def list_tags(self) -> list:
+        resp = self._post("tags/list", {"workspaceId": self.workspace_id})
+        return resp if isinstance(resp, list) else resp.get("tags", [])
+
+    def create_tag(self, name: str) -> dict:
+        resp = self._post("tags/create", {"workspaceId": self.workspace_id, "name": name})
+        return resp if isinstance(resp, dict) else {"tagId": resp, "name": name}
+
     # --- Sources ---
 
     def list_sources(self) -> list:

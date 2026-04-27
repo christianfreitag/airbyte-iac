@@ -11,18 +11,9 @@ namespace_definition: destination
 namespace_format: ''
 prefix: v2_
 tags:
-- tagId: b10f0be2-c103-41e6-a6ec-c99d16f5a614
-  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
-  name: prod
-  color: F93E47
-- tagId: 532f0db9-ff81-41c2-91de-fbd32eaf2977
-  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
-  name: Ingest
-  color: 8487E1
-- tagId: 73580a63-a341-4266-8eaf-002a19373a96
-  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
-  name: select:autodro_v2
-  color: BDFFC3
+- prod
+- Ingest
+- select:autodro_v2
 streams:
 - name: Account
   namespace: public
