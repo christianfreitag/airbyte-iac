@@ -1,0 +1,13 @@
+name: Snowflake
+destination_definition: Snowflake
+connection_configuration:
+  host: TBLZUIT-AUTOFORCE.snowflakecomputing.com
+  role: DATA_INGESTION_ROLE
+  schema: BRONZE
+  database: ZENDESK
+  username: CHRISTIAN
+  warehouse: WH_INGEST
+  credentials:
+    password: '**********'
+    auth_type: Username and Password
+  cdc_deletion_mode: Hard delete

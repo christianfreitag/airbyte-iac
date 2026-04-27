@@ -19,8 +19,9 @@ def _slug(name: str) -> str:
 
 def _select_tag(tags: list) -> str:
     for tag in tags:
-        if isinstance(tag, str) and tag.lower().startswith(TAG_PREFIX):
-            return tag[len(TAG_PREFIX):].strip()
+        name = tag.get("name", "") if isinstance(tag, dict) else str(tag)
+        if name.lower().startswith(TAG_PREFIX):
+            return name[len(TAG_PREFIX):].strip()
     return "_other"
 
 

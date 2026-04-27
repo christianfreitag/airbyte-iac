@@ -1,0 +1,17 @@
+name: Postgres Autodro2.0 - General
+source_definition: Postgres
+connection_configuration:
+  host: dpg-d30rg67fte5s73ep3gvg-a.virginia-postgres.render.com
+  port: 5432
+  schemas:
+  - public
+  database: atd_workspace_general_api_prod
+  password: '**********'
+  ssl_mode:
+    mode: require
+  username: autoforce
+  tunnel_method:
+    tunnel_method: NO_TUNNEL
+  replication_method:
+    method: Standard
+  entra_service_principal_auth: false

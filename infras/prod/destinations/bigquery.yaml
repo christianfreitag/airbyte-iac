@@ -1,0 +1,11 @@
+name: BigQuery
+destination_definition: BigQuery
+connection_configuration:
+  dataset_id: marts
+  project_id: evoluir-dados
+  loading_method:
+    method: Standard
+  credentials_json: '**********'
+  dataset_location: southamerica-east1
+  cdc_deletion_mode: Hard delete
+  disable_type_dedupe: false

@@ -4,6 +4,12 @@ import sys
 import argparse
 from pathlib import Path
 
+# força UTF-8 no terminal Windows (evita UnicodeEncodeError com → e outros)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
@@ -79,7 +85,11 @@ def cmd_list(args):
         status = conn.get("status", "")
         color = "green" if status == "active" else "red"
         tags = conn.get("tags", [])
-        select_tag = next((t for t in tags if isinstance(t, str) and t.startswith("select:")), "—")
+        select_tag = next(
+            (t.get("name") if isinstance(t, dict) else t for t in tags
+             if (t.get("name") if isinstance(t, dict) else t or "").startswith("select:")),
+            "-"
+        )
         table.add_row(
             conn["name"],
             sources.get(conn["sourceId"], "?"),

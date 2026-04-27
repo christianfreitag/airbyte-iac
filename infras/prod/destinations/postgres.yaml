@@ -1,0 +1,14 @@
+name: Postgres
+destination_definition: Postgres
+connection_configuration:
+  host: aws-1-sa-east-1.pooler.supabase.com
+  port: 6543
+  schema: public
+  database: postgres
+  password: '**********'
+  ssl_mode:
+    mode: disable
+  username: postgres.dhbxbeyjerwtfvitzrwt
+  tunnel_method:
+    tunnel_method: NO_TUNNEL
+  cdc_deletion_mode: Hard delete

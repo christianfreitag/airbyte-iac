@@ -1,0 +1,354 @@
+name: 'AUTODRO:1 -> SNOW : all_stream'
+source: Autodromo 1.0 - CRM
+destination: Snowflake - Autodromo 1.0
+status: active
+schedule_type: cron
+schedule:
+  cron:
+    cronExpression: 0 0 4 * * ?
+    cronTimeZone: Brazil/East
+namespace_definition: destination
+namespace_format: autodromo_
+prefix: autodromo_
+tags:
+- tagId: b10f0be2-c103-41e6-a6ec-c99d16f5a614
+  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
+  name: prod
+  color: F93E47
+- tagId: 532f0db9-ff81-41c2-91de-fbd32eaf2977
+  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
+  name: Ingest
+  color: 8487E1
+- tagId: 73e8daa5-c959-4973-ab91-165611d16ae6
+  workspaceId: 3dd33885-37ef-473e-ac00-58aba2d52e28
+  name: select:autodro
+  color: 9D2BE9
+streams:
+- name: accessories
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: accouts
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: baits
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: banners
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: base_services
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: brands
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: channel_pop_ups
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: channel_tag_associations
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: channel_tags
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: channel_units
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: channels
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: clones
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: consortia
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: conversion_exporter_team_leads
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: conversion_exporters
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: direct_sales
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: groups
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: highlights
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: homes
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: jobs
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: managers
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: models
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: new_conversions
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: new_leads
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: offers
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: pages
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: parts
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: portals
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: posts
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: reviews
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: seals
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: services
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: sites
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: subteam_lead_channels
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: subteam_leads
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: tags
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: team_leads
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: teams_units
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
+- name: units
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: used_models
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - updated_at
+  primary_key:
+  - - id
+- name: users
+  namespace: public
+  sync_mode: incremental
+  destination_sync_mode: append_dedup
+  cursor_field:
+  - id
+  primary_key:
+  - - id
