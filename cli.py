@@ -24,7 +24,7 @@ from airbyte.extractor import extract_sources, extract_destinations, extract_con
 from airbyte.pusher import push_connection, push_all_connections, push_all_sources, push_all_destinations
 from airbyte.differ import diff_connections
 
-console = Console(highlight=False)
+console = Console(highlight=False, force_terminal=True)
 ROOT = Path(__file__).parent
 
 
@@ -70,6 +70,49 @@ def get_client(infra: str) -> AirbyteClient:
         password=os.environ.get("AIRBYTE_PASSWORD"),
         workspace_id=os.environ.get("AIRBYTE_WORKSPACE_ID"),
     )
+
+
+def cmd_help(_args=None):
+    from rich.table import Table
+    console.print()
+    console.print(Panel("[bold cyan]Airbyte IaC[/bold cyan] [dim]— gerencie conexões como código[/dim]", expand=False, border_style="cyan", padding=(0, 2)))
+
+    def section(title, rows):
+        t = Table(box=box.SIMPLE, show_header=False, padding=(0, 2), expand=False)
+        t.add_column(style="bold green",  no_wrap=True, min_width=42)
+        t.add_column(style="dim", no_wrap=False)
+        for cmd, desc in rows:
+            t.add_row(cmd, desc)
+        console.print(f"\n  [bold white]{title}[/bold white]")
+        console.print(t)
+
+    section("SETUP", [
+        ("make init", "Configura novo target: URL, credenciais, workspace"),
+    ])
+    section("DIA A DIA", [
+        ("make pull   TARGET=prod",          "Extrai sources, destinations e connections → YAML"),
+        ("make pull",                         "Extrai de todos os targets em targets/"),
+        ("make push   TARGET=prod",          "Aplica YAMLs no Airbyte (sources → dest → connections)"),
+        ("make status TARGET=prod",          "Compara YAML local vs Airbyte"),
+        ("make status",                       "Status de todos os targets"),
+        ("make list   TARGET=prod",          "Lista conexões com status, schedule e select"),
+        ("make dry-run TARGET=prod",         "Simula push sem aplicar nada"),
+    ])
+    section("AMBIENTES", [
+        ("make sync  TARGET=dev FROM=prod",  "Pull de prod + push para dev"),
+        ("make clone TARGET=stg FROM=prod",  "Copia YAMLs de prod → staging (sem subir)"),
+        ("make push  TARGET=dev FROM=prod",  "Lê YAMLs de prod e sobe no Airbyte dev"),
+    ])
+    section("FILTROS", [
+        ("make push TARGET=prod SELECT=ga4",              "Aplica só o grupo ga4"),
+        ("make push TARGET=prod SELECT=ga4 FILE=x.yaml", "Aplica um único arquivo"),
+        ("make status TARGET=prod VERBOSE=1",             "Diff completo campo a campo"),
+    ])
+    section("PERIGOSO", [
+        ("make reset TARGET=dev", "[red]Apaga TUDO no Airbyte dev[/red] (pede confirmação)"),
+        ("make clean TARGET=dev", "Apaga pasta targets/dev/ localmente"),
+    ])
+    console.print()
 
 
 def cmd_workspaces(args):
@@ -452,6 +495,8 @@ def main():
     parser = argparse.ArgumentParser(prog="airbyte-iac", description="Airbyte IaC — gerencie conexões via YAML")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    sub.add_parser("help",           help="Mostra esta ajuda")
+
     p = sub.add_parser("list",       help="Lista conexões do Airbyte")
     p.add_argument("--target", "-t", default=None)
 
@@ -521,7 +566,8 @@ def main():
          "list": lambda: _run_all(cmd_list)}[cmd]()
     else:
         {
-            "list":       cmd_list,
+            "help":       cmd_help,
+        "list":       cmd_list,
             "pull":       cmd_extract,
             "push":       cmd_push,
             "status":     cmd_diff,
