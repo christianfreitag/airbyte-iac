@@ -90,6 +90,12 @@ def extract_connections(client: AirbyteClient, infra: str, root: Path, select: s
                 "destination_sync_mode": config.get("destinationSyncMode", "overwrite"),
                 "cursor_field": config.get("cursorField", []),
                 "primary_key": config.get("primaryKey", []),
+                # schema completo preservado para push sem discover_schema
+                "json_schema": stream.get("jsonSchema", {}),
+                "supported_sync_modes": stream.get("supportedSyncModes", []),
+                "default_cursor_field": stream.get("defaultCursorField", []),
+                "source_defined_cursor": stream.get("sourceDefinedCursor", False),
+                "source_defined_primary_key": stream.get("sourceDefinedPrimaryKey", []),
             })
 
         schedule_type = conn.get("scheduleType", "manual")

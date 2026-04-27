@@ -132,24 +132,26 @@ def push_connection(client: AirbyteClient, yaml_path: Path, dry_run: bool = Fals
     source_id = sources[validated.source]["sourceId"]
     destination_id = destinations[validated.destination]["destinationId"]
 
-    schema_streams = {
-        s["stream"]["name"]: s
-        for s in client.discover_schema(source_id).get("catalog", {}).get("streams", [])
-    }
-
     sync_streams = []
     for sd in validated.streams:
-        if sd.name not in schema_streams:
-            raise ValueError(f"Stream '{sd.name}' não existe na source '{validated.source}'.")
-        base = schema_streams[sd.name]
-        base["config"] = {
-            "selected": True,
-            "syncMode": sd.sync_mode,
-            "destinationSyncMode": sd.destination_sync_mode,
-            "cursorField": sd.cursor_field,
-            "primaryKey": sd.primary_key,
-        }
-        sync_streams.append(base)
+        sync_streams.append({
+            "stream": {
+                "name": sd.name,
+                "namespace": sd.namespace or None,
+                "jsonSchema": sd.json_schema,
+                "supportedSyncModes": sd.supported_sync_modes,
+                "defaultCursorField": sd.default_cursor_field,
+                "sourceDefinedCursor": sd.source_defined_cursor,
+                "sourceDefinedPrimaryKey": sd.source_defined_primary_key,
+            },
+            "config": {
+                "selected": True,
+                "syncMode": sd.sync_mode,
+                "destinationSyncMode": sd.destination_sync_mode,
+                "cursorField": sd.cursor_field,
+                "primaryKey": sd.primary_key,
+            },
+        })
 
     config = {
         "sourceId": source_id,

@@ -21,9 +21,14 @@ class StreamConfig(BaseModel):
     name: str
     namespace: str = ""
     sync_mode: Literal["full_refresh", "incremental"] = "full_refresh"
-    destination_sync_mode: Literal["overwrite", "append", "append_dedup"] = "overwrite"
+    destination_sync_mode: Literal["overwrite", "append", "append_dedup", "overwrite_dedup"] = "overwrite"
     cursor_field: List[Any] = []
     primary_key: List[Any] = []
+    json_schema: Dict[str, Any] = {}
+    supported_sync_modes: List[str] = []
+    default_cursor_field: List[Any] = []
+    source_defined_cursor: bool = False
+    source_defined_primary_key: List[Any] = []
 
 
 class ConnectionConfig(BaseModel):

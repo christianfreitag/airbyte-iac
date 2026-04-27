@@ -1,0 +1,6 @@
+name: BigQuery
+source_definition: BigQuery
+connection_configuration:
+  dataset_id: marts
+  project_id: evoluir-dados
+  credentials_json: '**********'
