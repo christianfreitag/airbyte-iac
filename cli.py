@@ -144,20 +144,16 @@ def cmd_push(args):
             sys.exit(1)
         return
 
-    if not args.select:
-        # push completo: sources + destinations + todas as connections
-        with console.status("[bold]Aplicando sources..."):
-            src = push_all_sources(client, args.infra, ROOT, dry_run=args.dry_run)
-        with console.status("[bold]Aplicando destinations..."):
-            dst = push_all_destinations(client, args.infra, ROOT, dry_run=args.dry_run)
-        with console.status("[bold]Aplicando connections..."):
-            conn = push_all_connections(client, args.infra, ROOT, dry_run=args.dry_run)
-        _push_table(src + dst + conn, f"Push → {args.infra}")
-    else:
-        # push seletivo: só connections do select
-        with console.status(f"[bold]Aplicando connections ({args.select})..."):
-            conn = push_all_connections(client, args.infra, ROOT, select=args.select, dry_run=args.dry_run)
-        _push_table(conn, f"Push → {args.infra}/{args.select}")
+    # sources e destinations sempre primeiro — connections dependem delas
+    with console.status("[bold]Aplicando sources..."):
+        src = push_all_sources(client, args.infra, ROOT, dry_run=args.dry_run)
+    with console.status("[bold]Aplicando destinations..."):
+        dst = push_all_destinations(client, args.infra, ROOT, dry_run=args.dry_run)
+    with console.status(f"[bold]Aplicando connections{f' ({args.select})' if args.select else ''}..."):
+        conn = push_all_connections(client, args.infra, ROOT, select=args.select, dry_run=args.dry_run)
+
+    title = f"Push → {args.infra}" + (f"/{args.select}" if args.select else "")
+    _push_table(src + dst + conn, title)
 
 
 def cmd_diff(args):
